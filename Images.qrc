@@ -1,0 +1,20 @@
+<RCC>
+    <qresource prefix="/Images">
+        <file>Images/table.png</file>
+        <file>Images/client.png</file>
+        <file>Images/cuisine.png</file>
+        <file>Images/cuisine2.png</file>
+        <file>Images/cuisine3.png</file>
+        <file>Images/frigo.png</file>
+        <file>Images/background.jpg</file>
+        <file>Images/chef.png</file>
+        <file>Images/serve.png</file>
+        <file>Images/lav.png</file>
+        <file>Images/compt.png</file>
+        <file>Images/chef-rang.png</file>
+        <file>Images/commis-cuisine.png</file>
+        <file>Images/commis-salle.png</file>
+        <file>Images/hostel-master.png</file>
+        <file>Images/plongeur.png</file>
+    </qresource>
+</RCC>
