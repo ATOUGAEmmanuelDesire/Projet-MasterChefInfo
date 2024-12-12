@@ -134,7 +134,7 @@ void MainWindow::createTablesAndClients() {
     // Création des clients (4 clients) avec position initiale
     int entryX = 40; // Position initiale en X (entrée)
     int entryY = 500; // Position initiale en Y (entrée)
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 8; ++i) {
         Client *client = new Client(this);
         client->setId(i + 1);
         client->setName(QString("Client %1").arg(i + 1));
@@ -153,7 +153,7 @@ void MainWindow::createTablesAndClients() {
 void MainWindow::startBehavior() {
     QTimer *timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &MainWindow::moveClientsBetweenTables);
-    timer->start(5000); // Répète toutes les 5 secondes
+    timer->start(15000); // Répète toutes les 5 secondes
 
     // Premier cycle
     moveClientsBetweenTables();
@@ -194,18 +194,55 @@ void MainWindow::moveClientsBetweenTables() {
 }
 
 
+void MainWindow::showTemporaryMessage(Client *client, const QString &message) {
+    if (!client)
+        return;
+
+    // Crée un QLabel pour afficher le message
+    QLabel *messageLabel = new QLabel(this);
+    messageLabel->setText(message);
+    messageLabel->setStyleSheet("QLabel { background-color: yellow; color: black; font: bold 14px; border-radius: 5px; padding: 5px; }");
+    messageLabel->setAlignment(Qt::AlignCenter);
+
+    // Positionne le message juste au-dessus du client
+    QRect clientGeometry = client->geometry();
+    int messageWidth = 200;
+    int messageHeight = 50;
+    int posX = clientGeometry.center().x() - (messageWidth / 2);
+    int posY = clientGeometry.top() - messageHeight - 10;
+
+    messageLabel->setGeometry(posX, posY, messageWidth, messageHeight);
+    messageLabel->show();
+
+    // Faire disparaître le message après 2 secondes
+    QTimer::singleShot(2000, this, [messageLabel]() {
+        messageLabel->deleteLater();
+    });
+}
 
 
 void MainWindow::moveClientToTable(Client *client, Table *table) {
+    if (!table || occupiedTables.contains(table)) {
+        qDebug() << "Erreur : Tentative de déplacement vers une table déjà occupée.";
+        return;
+    }
+
+    // Afficher le message avant le déplacement
+    showTemporaryMessage(client, "Bonjour cher client. Installez-vous.");
+
     // Déplacement du client vers la table
     client->moveTo(table->geometry());
     clientCurrentTable[client] = table; // Met à jour la table actuelle du client
+
+    // Ajouter la table aux tables occupées
+    occupiedTables.insert(table);
 
     // Appeler un serveur pour servir le client
     QTimer::singleShot(1000, this, [this, client]() {
         moveServerToClient(client);
     });
 }
+
 
 
 
@@ -231,8 +268,11 @@ Table* MainWindow::getNextTable(Client *client) {
         return availableTables[randomIndex];
     }
 
-    return nullptr;
+    qDebug() << "Aucune table disponible pour " << client->getName();
+    return nullptr; // Aucune table disponible
 }
+
+
 void MainWindow::setupKitchen() {
     // Chargement des images pour les équipements
     QPixmap ovenPixmap("C:/Users/HP/Downloads/Projet-X3-save-main/Images/lav.png");
@@ -323,36 +363,52 @@ void MainWindow::moveServerToClient(Client *client) {
         qDebug() << "Erreur : Aucune table assignée au client.";
         return;
     }
+
     QRect tablePosition = table->geometry();
 
     // Sélectionner un serveur disponible
     static int serverIndex = 0;
     Staff *server = servers[serverIndex++ % servers.size()]; // Boucler sur les serveurs
 
-    // Définir la position cible du serveur (près de la table)
-    QRect targetPosition(tablePosition.x() + 10, tablePosition.y() - 50, server->width(), server->height());
+    // Animation pour retourner le serveur en cuisine avant de servir le client
+    QRect kitchenPosition(700, 10 + (serverIndex - 1) % servers.size() * 150, server->width(), server->height());
+    QPropertyAnimation *animationToKitchen = new QPropertyAnimation(server, "geometry");
+    animationToKitchen->setDuration(3000);
+    animationToKitchen->setStartValue(server->geometry());
+    animationToKitchen->setEndValue(kitchenPosition);
+    animationToKitchen->setEasingCurve(QEasingCurve::InOutQuad);
 
-    // Animation pour déplacer le serveur vers la table
+    // Animation pour déplacer le serveur vers la table après avoir atteint la cuisine
     QPropertyAnimation *animationToTable = new QPropertyAnimation(server, "geometry");
-    animationToTable->setDuration(3000); // Uniformiser les durées
-    animationToTable->setStartValue(server->geometry());
+    animationToTable->setDuration(3000);
+    QRect targetPosition(tablePosition.x() + 10, tablePosition.y() - 50, server->width(), server->height());
+    animationToTable->setStartValue(kitchenPosition);
     animationToTable->setEndValue(targetPosition);
     animationToTable->setEasingCurve(QEasingCurve::InOutQuad);
-    animationToTable->start(QAbstractAnimation::DeleteWhenStopped);
 
-    // Retourner le serveur à la cuisine après une pause
-    QTimer::singleShot(4000, this, [this, server, serverIndex]() {
-        QRect kitchenPosition(700, 10 + (serverIndex - 1) % servers.size() * 150, server->width(), server->height());
-        QPropertyAnimation *animationToKitchen = new QPropertyAnimation(server, "geometry");
-        animationToKitchen->setDuration(3000);
-        animationToKitchen->setStartValue(server->geometry());
-        animationToKitchen->setEndValue(kitchenPosition);
-        animationToKitchen->setEasingCurve(QEasingCurve::InOutQuad);
-        animationToKitchen->start(QAbstractAnimation::DeleteWhenStopped);
-
-        qDebug() << "Serveur retourne en cuisine.";
+    // Chainer les animations
+    connect(animationToKitchen, &QPropertyAnimation::finished, this, [animationToTable]() {
+        animationToTable->start(QAbstractAnimation::DeleteWhenStopped);
     });
+
+    animationToKitchen->start(QAbstractAnimation::DeleteWhenStopped);
+
+    // Une fois la tâche terminée, le serveur retourne en cuisine
+    QTimer::singleShot(7000, this, [this, server, serverIndex]() {
+        QRect kitchenPosition(700, 10 + (serverIndex - 1) % servers.size() * 150, server->width(), server->height());
+        QPropertyAnimation *animationToKitchenAfterService = new QPropertyAnimation(server, "geometry");
+        animationToKitchenAfterService->setDuration(3000);
+        animationToKitchenAfterService->setStartValue(server->geometry());
+        animationToKitchenAfterService->setEndValue(kitchenPosition);
+        animationToKitchenAfterService->setEasingCurve(QEasingCurve::InOutQuad);
+        animationToKitchenAfterService->start(QAbstractAnimation::DeleteWhenStopped);
+
+        qDebug() << "Serveur retourne en cuisine après avoir servi.";
+    });
+
+    qDebug() << "Serveur retourne en cuisine puis va servir.";
 }
+
 
 
 
@@ -549,9 +605,5 @@ void MainWindow::addStaticCharacters() {
     character6->show();
     character7->show();
 }
-
-
-
-
 
 
