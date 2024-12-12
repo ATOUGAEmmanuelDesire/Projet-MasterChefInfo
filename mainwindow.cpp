@@ -182,7 +182,7 @@ void MainWindow::createTablesAndClients() {
 void MainWindow::startBehavior() {
     QTimer *timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &MainWindow::moveClientsBetweenTables);
-    timer->start(15000); // Répète toutes les 5 secondes
+    timer->start(1000000); // Répète toutes les 5 secondes
 
     // Premier cycle
     moveClientsBetweenTables();
@@ -230,7 +230,7 @@ void MainWindow::showTemporaryMessage(Client *client, const QString &message) {
     // Crée un QLabel pour afficher le message
     QLabel *messageLabel = new QLabel(this);
     messageLabel->setText(message);
-    messageLabel->setStyleSheet("QLabel { background-color: yellow; color: black; font: bold 14px; border-radius: 5px; padding: 5px; }");
+    messageLabel->setStyleSheet("QLabel { background-color: white; color: black; font: bold 14px; border-radius: 5px; padding: 5px; }");
     messageLabel->setAlignment(Qt::AlignCenter);
 
     // Positionne le message juste au-dessus du client
@@ -256,9 +256,6 @@ void MainWindow::moveClientToTable(Client *client, Table *table) {
         return;
     }
 
-    // Afficher le message avant le déplacement
-    showTemporaryMessage(client, "Bonjour cher client. Installez-vous.");
-
     // Déplacement du client vers la table
     client->moveTo(table->geometry());
     clientCurrentTable[client] = table; // Met à jour la table actuelle du client
@@ -266,13 +263,12 @@ void MainWindow::moveClientToTable(Client *client, Table *table) {
     // Ajouter la table aux tables occupées
     occupiedTables.insert(table);
 
+
     // Appeler un serveur pour servir le client
     QTimer::singleShot(1000, this, [this, client]() {
         moveServerToClient(client);
     });
 }
-
-
 
 
 
@@ -296,6 +292,7 @@ Table* MainWindow::getNextTable(Client *client) {
         int randomIndex = QRandomGenerator::global()->bounded(availableTables.size());
         return availableTables[randomIndex];
     }
+
 
     qDebug() << "Aucune table disponible pour " << client->getName();
     return nullptr; // Aucune table disponible
@@ -393,6 +390,7 @@ void MainWindow::moveServerToClient(Client *client) {
         return;
     }
 
+
     QRect tablePosition = table->geometry();
 
     // Sélectionner un serveur disponible
@@ -422,6 +420,11 @@ void MainWindow::moveServerToClient(Client *client) {
 
     animationToKitchen->start(QAbstractAnimation::DeleteWhenStopped);
 
+    // Afficher le message avant le déplacement
+    showTemporaryMessage(client, "Miam miam. J'ai faim.");
+
+
+
     // Une fois la tâche terminée, le serveur retourne en cuisine
     QTimer::singleShot(7000, this, [this, server, serverIndex]() {
         QRect kitchenPosition(700, 10 + (serverIndex - 1) % servers.size() * 150, server->width(), server->height());
@@ -436,7 +439,9 @@ void MainWindow::moveServerToClient(Client *client) {
     });
 
     qDebug() << "Serveur retourne en cuisine puis va servir.";
+
 }
+
 
 
 
@@ -487,6 +492,8 @@ void MainWindow::moveServersToOccupiedTables() {
 
         qDebug() << "Serveur " << i + 1 << " se dirige vers une table occupée.";
     }
+
+
 }
 
 
@@ -586,53 +593,86 @@ void MainWindow::addStaticCharacters() {
     QPixmap character6Pixmap("C:/Users/HP/Downloads/Projet-X3-save-main/Images/commis-salle.png");
     QPixmap character7Pixmap("C:/Users/HP/Downloads/Projet-X3-save-main/Images/plongeur.png");
 
-
-
     // Création des personnages statiques
-    QLabel *character1 = new QLabel(this);
-    QLabel *character2 = new QLabel(this);
-    QLabel *character3 = new QLabel(this);
-    QLabel *character4 = new QLabel(this);
-    QLabel *character5 = new QLabel(this);
-    QLabel *character6 = new QLabel(this);
-    QLabel *character7 = new QLabel(this);
+    QLabel* characters[7];
+    characters[0] = new QLabel(this);
+    characters[1] = new QLabel(this);
+    characters[2] = new QLabel(this);
+    characters[3] = new QLabel(this);
+    characters[4] = new QLabel(this);
+    characters[5] = new QLabel(this);
+    characters[6] = new QLabel(this);
 
     // Définition des images
-    character1->setPixmap(character1Pixmap);
-    character2->setPixmap(character2Pixmap);
-    character3->setPixmap(character3Pixmap);
-    character4->setPixmap(character4Pixmap);
-    character5->setPixmap(character5Pixmap);
-    character6->setPixmap(character6Pixmap);
-    character7->setPixmap(character7Pixmap);
+    characters[0]->setPixmap(character1Pixmap);
+    characters[1]->setPixmap(character2Pixmap);
+    characters[2]->setPixmap(character3Pixmap);
+    characters[3]->setPixmap(character4Pixmap);
+    characters[4]->setPixmap(character5Pixmap);
+    characters[5]->setPixmap(character6Pixmap);
+    characters[6]->setPixmap(character7Pixmap);
 
     // Ajustement des tailles des images
-    character1->setScaledContents(true);
-    character2->setScaledContents(true);
-    character3->setScaledContents(true);
-    character4->setScaledContents(true);
-    character5->setScaledContents(true);
-    character6->setScaledContents(true);
-    character7->setScaledContents(true);
-
+    for (int i = 0; i < 7; ++i) {
+        characters[i]->setScaledContents(true);
+    }
 
     // Définir la géométrie des personnages (emplacements spécifiques)
-    character1->setGeometry(100, 580, 100, 90); // Position (X, Y) et taille (largeur, hauteur)
-    character2->setGeometry(950, 120, 140, 140);
-    character3->setGeometry(900, 350, 100, 80);
-    character4->setGeometry(50, 10, 100, 80);
-    character5->setGeometry(500, 10, 100, 80);
-    character6->setGeometry(320, 10, 100, 80);
-    character7->setGeometry(900, 220, 100, 80);
+    characters[0]->setGeometry(100, 580, 100, 90);
+    characters[1]->setGeometry(950, 120, 140, 140);
+    characters[2]->setGeometry(900, 350, 100, 80);
+    characters[3]->setGeometry(50, 10, 100, 80);
+    characters[4]->setGeometry(500, 10, 100, 80);
+    characters[5]->setGeometry(320, 10, 100, 80);
+    characters[6]->setGeometry(900, 220, 100, 80);
 
-    // Afficher les personnages
-    character1->show();
-    character2->show();
-    character3->show();
-    character4->show();
-    character5->show();
-    character6->show();
-    character7->show();
+    // Afficher les personnages et ajouter des animations oscillatoires
+    for (int i = 0; i < 7; ++i) {
+        characters[i]->show();
+
+        // Créer une animation oscillatoire
+        QPropertyAnimation *animation = new QPropertyAnimation(characters[i], "geometry");
+        animation->setDuration(1000); // Durée de l'oscillation
+        animation->setLoopCount(-1); // Loop indéfini
+
+        // Définir la position de départ et d'arrivée pour un mouvement oscillatoire
+        QRect startRect = characters[i]->geometry();
+        QRect endRect;
+
+        // Définir des mouvements oscillatoires différents pour chaque personnage
+        switch (i) {
+        case 0: // Oscillation haut/bas
+            endRect = QRect(startRect.x(), startRect.y() - 20, startRect.width(), startRect.height());
+            break;
+        case 1: // Oscillation gauche/droite
+            endRect = QRect(startRect.x() + 20, startRect.y(), startRect.width(), startRect.height());
+            break;
+        case 2: // Oscillation haut/bas
+            endRect = QRect(startRect.x(), startRect.y() - 20, startRect.width(), startRect.height());
+            break;
+        case 3: // Oscillation haut/bas
+            endRect = QRect(startRect.x(), startRect.y() - 20, startRect.width(), startRect.height());
+            break;
+        case 4: // Oscillation haut/bas
+            endRect = QRect(startRect.x(), startRect.y() - 20, startRect.width(), startRect.height());
+            break;
+        case 5: // Oscillation gauche
+            endRect = QRect(startRect.x() - 20, startRect.y(), startRect.width(), startRect.height());
+            break;
+        case 6: // Oscillation diagonale opposée
+            endRect = QRect(startRect.x() - 15, startRect.y() + 15, startRect.width(), startRect.height());
+            break;
+        }
+
+        // Configurer l'animation pour aller et revenir
+        animation->setKeyValueAt(0, startRect);
+        animation->setKeyValueAt(0.5, endRect);
+        animation->setKeyValueAt(1, startRect);
+        animation->setEasingCurve(QEasingCurve::InOutSine); // Courbe d'oscillation douce
+
+        // Démarrer l'animation
+        animation->start(QAbstractAnimation::DeleteWhenStopped);
+    }
 }
 
 
