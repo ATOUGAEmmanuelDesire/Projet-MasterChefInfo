@@ -131,17 +131,20 @@ void MainWindow::createTablesAndClients() {
 
 
 
-    // Création des clients (4 clients)
+    // Création des clients (4 clients) avec position initiale
+    int entryX = 40; // Position initiale en X (entrée)
+    int entryY = 500; // Position initiale en Y (entrée)
     for (int i = 0; i < 4; ++i) {
         Client *client = new Client(this);
         client->setId(i + 1);
         client->setName(QString("Client %1").arg(i + 1));
         client->setPixmap(clientPixmap);
-        client->setGeometry(50, 40 + i * 100, 50, 50); // Position dynamique
+        client->setGeometry(entryX, entryY + i * 60, 50, 50); // Alignés verticalement à l'entrée
         client->show();
         clientList.append(client);
-        clientCurrentTable[client] = nullptr; // Initialisation
+        clientCurrentTable[client] = nullptr; // Initialisation sans table
     }
+
 
 
 }
@@ -161,12 +164,15 @@ void MainWindow::moveClientsBetweenTables() {
     // Réinitialiser les tables occupées
     occupiedTables.clear();
 
+    int delay = 0; // Début sans délai
+    const int delayIncrement = 10000; // Délai entre chaque client (en millisecondes)
+
     for (Client *client : clientList) {
         if (!client)
             continue;
 
-        // Si le client n'a pas encore été placé à une table
-        if (!clientCurrentTable[client]) {
+        // Planifier le déplacement du client avec un délai
+        QTimer::singleShot(delay, this, [this, client]() {
             Table *nextTable = getNextTable(client);
             if (nextTable) {
                 // Déplacer le client vers la table
@@ -174,9 +180,20 @@ void MainWindow::moveClientsBetweenTables() {
                 occupiedTables.insert(nextTable); // Marquer la table comme occupée
                 qDebug() << client->getName() << "se déplace vers" << nextTable->getDescription();
             }
-        }
+
+            // Si c'est le dernier client, lancer le déplacement des serveurs
+            if (client == clientList.last()) {
+                QTimer::singleShot(delayIncrement, this, [this]() {
+                    moveServersToOccupiedTables();
+                });
+            }
+        });
+
+        delay += delayIncrement; // Incrémenter le délai pour le prochain client
     }
 }
+
+
 
 
 void MainWindow::moveClientToTable(Client *client, Table *table) {
@@ -251,10 +268,11 @@ void MainWindow::setupKitchen() {
 QList<Staff*> servers;
 
 void MainWindow::setupStaff() {
+
     // Configuration du chef
     chef = static_cast<Staff*>(ui->chef); // Utiliser le QLabel existant pour le chef
     chef->setPixmap(QPixmap("C:/Users/HP/Downloads/Projet-X3-save-main/Images/chef.png"));
-    chef->setScaledContents(true); // Ajuste l'image au QLabel
+    chef->setScaledContents(true); // Ajuste l'image au QLabel4
     chef->show();
 
     // Configuration du deuxième chef
@@ -275,8 +293,8 @@ void MainWindow::setupStaff() {
         QPixmap resizedPixmap = pixmap.scaled(customSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 
         // Position initiale et espacement des serveurs
-        int startX = 100;  // Position X de départ
-        int startY = 500;  // Position Y de départ
+        int startX = 700;  // Position X de départ
+        int startY = 10;  // Position Y de départ
         int spacing = 150; // Espacement entre les serveurs
 
         // Création de 4 serveurs
@@ -284,7 +302,7 @@ void MainWindow::setupStaff() {
             Staff* server = new Staff(this);
             server->setPixmap(resizedPixmap);
             server->setScaledContents(false);
-            server->setGeometry(startX + i * spacing, startY, customSize.width(), customSize.height());
+            server->setGeometry(startX , startY+ i * spacing, customSize.width(), customSize.height());
             server->show();
             servers.append(server); // Ajouter le serveur à la liste
         }
@@ -299,36 +317,94 @@ void MainWindow::moveServerToClient(Client *client) {
         return;
     }
 
-    // Sélectionner un serveur libre
-    Staff *server = servers.first(); // Utiliser le premier serveur disponible
+    // Obtenir la position du client et de sa table
+    Table *table = clientCurrentTable[client];
+    if (!table) {
+        qDebug() << "Erreur : Aucune table assignée au client.";
+        return;
+    }
+    QRect tablePosition = table->geometry();
 
-    // Obtenir la position du client
-    QRect clientPosition = client->geometry();
+    // Sélectionner un serveur disponible
+    static int serverIndex = 0;
+    Staff *server = servers[serverIndex++ % servers.size()]; // Boucler sur les serveurs
 
-    // Calculer la position cible (près de la table)
-    QRect targetPosition(clientPosition.x() + 10, clientPosition.y() - 50, server->width(), server->height());
+    // Définir la position cible du serveur (près de la table)
+    QRect targetPosition(tablePosition.x() + 10, tablePosition.y() - 50, server->width(), server->height());
 
-    // Déplacer le serveur vers la table du client
-    QPropertyAnimation *animationToClient = new QPropertyAnimation(server, "geometry");
-    animationToClient->setDuration(2000);
-    animationToClient->setStartValue(server->geometry());
-    animationToClient->setEndValue(targetPosition);
-    animationToClient->setEasingCurve(QEasingCurve::InOutQuad);
-    animationToClient->start(QAbstractAnimation::DeleteWhenStopped);
+    // Animation pour déplacer le serveur vers la table
+    QPropertyAnimation *animationToTable = new QPropertyAnimation(server, "geometry");
+    animationToTable->setDuration(3000); // Uniformiser les durées
+    animationToTable->setStartValue(server->geometry());
+    animationToTable->setEndValue(targetPosition);
+    animationToTable->setEasingCurve(QEasingCurve::InOutQuad);
+    animationToTable->start(QAbstractAnimation::DeleteWhenStopped);
 
     // Retourner le serveur à la cuisine après une pause
-    QTimer::singleShot(3000, this, [this, server]() {
-        QRect kitchenPosition = QRect(100, 500, server->width(), server->height()); // Position de la cuisine
+    QTimer::singleShot(4000, this, [this, server, serverIndex]() {
+        QRect kitchenPosition(700, 10 + (serverIndex - 1) % servers.size() * 150, server->width(), server->height());
         QPropertyAnimation *animationToKitchen = new QPropertyAnimation(server, "geometry");
-        animationToKitchen->setDuration(2000);
+        animationToKitchen->setDuration(3000);
         animationToKitchen->setStartValue(server->geometry());
         animationToKitchen->setEndValue(kitchenPosition);
         animationToKitchen->setEasingCurve(QEasingCurve::InOutQuad);
         animationToKitchen->start(QAbstractAnimation::DeleteWhenStopped);
 
-        qDebug() << "Serveur retourne à la cuisine.";
+        qDebug() << "Serveur retourne en cuisine.";
     });
 }
+
+
+
+void MainWindow::moveServersToOccupiedTables() {
+    if (servers.isEmpty() || occupiedTables.isEmpty()) {
+        qDebug() << "Erreur : Aucun serveur ou aucune table occupée.";
+        return;
+    }
+
+    QList<Table*> occupiedTablesList = QList<Table*>(occupiedTables.begin(), occupiedTables.end());
+    int totalTables = occupiedTablesList.size();
+    int totalServers = servers.size();
+
+    for (int i = 0; i < totalServers; ++i) {
+        if (i >= totalTables) {
+            qDebug() << "Serveur " << i + 1 << " n'a pas de table à servir.";
+            continue; // Si plus de serveurs que de tables occupées, certains serveurs restent en cuisine
+        }
+
+        Staff *server = servers[i];
+        Table *table = occupiedTablesList[i];
+        QRect tablePosition = table->geometry();
+
+        // Définir la position cible du serveur (près de la table)
+        QRect targetPosition(tablePosition.x() + 10, tablePosition.y() - 50, server->width(), server->height());
+
+        // Animation pour déplacer le serveur vers la table
+        QPropertyAnimation *animationToTable = new QPropertyAnimation(server, "geometry");
+        animationToTable->setDuration(3000); // Durée uniforme pour tous les serveurs
+        animationToTable->setStartValue(server->geometry());
+        animationToTable->setEndValue(targetPosition);
+        animationToTable->setEasingCurve(QEasingCurve::InOutQuad);
+        animationToTable->start(QAbstractAnimation::DeleteWhenStopped);
+
+        // Retourner le serveur à la cuisine après une pause
+        QTimer::singleShot(4000, this, [this, server, i]() {
+            QRect kitchenPosition(700, 10 + i * 150, server->width(), server->height()); // Position initiale en cuisine
+            QPropertyAnimation *animationToKitchen = new QPropertyAnimation(server, "geometry");
+            animationToKitchen->setDuration(3000); // Durée uniforme
+            animationToKitchen->setStartValue(server->geometry());
+            animationToKitchen->setEndValue(kitchenPosition);
+            animationToKitchen->setEasingCurve(QEasingCurve::InOutQuad);
+            animationToKitchen->start(QAbstractAnimation::DeleteWhenStopped);
+
+            qDebug() << "Serveur " << i + 1 << " retourne en cuisine.";
+        });
+
+        qDebug() << "Serveur " << i + 1 << " se dirige vers une table occupée.";
+    }
+}
+
+
 
 
 
@@ -376,7 +452,7 @@ void MainWindow::moveChefToNextTask() {
 
     // Animation pour déplacer le chef vers la position ajustée
     QPropertyAnimation *animation = new QPropertyAnimation(chef, "geometry");
-    animation->setDuration(2000); // Durée de l'animation
+    animation->setDuration(3000); // Durée de l'animation
     animation->setStartValue(chef->geometry());
     animation->setEndValue(adjustedPosition);
     animation->setEasingCurve(QEasingCurve::InOutQuad);
@@ -390,7 +466,7 @@ void MainWindow::moveChefToNextTask() {
 
 void MainWindow::resizeServer() {
     QPropertyAnimation *resizeAnimation = new QPropertyAnimation(server, "geometry");
-    resizeAnimation->setDuration(1000); // Durée de l'animation
+    resizeAnimation->setDuration(3000); // Durée de l'animation
     resizeAnimation->setStartValue(server->geometry());
     resizeAnimation->setEndValue(QRect(server->x(), server->y(), 80, 80)); // Nouvelle taille (80x80)
     resizeAnimation->setEasingCurve(QEasingCurve::InOutQuad);
@@ -412,7 +488,7 @@ void MainWindow::moveChefInKitchen() {
 void MainWindow::setupChefMovement() {
     QTimer *chefTimer = new QTimer(this);
     connect(chefTimer, &QTimer::timeout, this, &MainWindow::moveChefToNextTask);
-    chefTimer->start(5000); // Déplacement toutes les 5 secondes
+    chefTimer->start(4000); // Déplacement toutes les 5 secondes
 }
 
 void MainWindow::addStaticCharacters() {
