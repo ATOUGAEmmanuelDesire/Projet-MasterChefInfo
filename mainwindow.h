@@ -9,6 +9,7 @@
 #include "Table.h"
 #include "kitchencontroller.h"
 #include "staff.h"
+#include <QPushButton>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -24,6 +25,9 @@ public:
 
 private:
     Ui::MainWindow *ui;
+    bool isPaused;
+
+
 
     // Listes pour stocker les tables et les clients
     QList<Client*> clientList;
@@ -33,6 +37,7 @@ private:
 
     Staff *chef;    // Objet représentant le chef
     Staff *server;  // Objet représentant le serveur
+
 
     // Méthodes pour configurer et gérer les tables et les clients
     void setupUI();                               // Initialise l'interface utilisateur
@@ -50,6 +55,11 @@ private:
     void moveChefBetweenComptoirAndFrigo();
     void setupChefMovement();
     void addStaticCharacters();
+    void moveServersToOccupiedTables(); // Déplace les serveurs vers les tables occupée
+    void showTemporaryMessage(Client *client, const QString &message);
+
+private slots:
+    void togglePause();
 };
 
 #endif // MAINWINDOW_H
