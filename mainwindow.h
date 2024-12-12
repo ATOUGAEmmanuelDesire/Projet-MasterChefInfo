@@ -23,6 +23,8 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+    void displayOrderMessage(Staff *server, const QString &message);
+
 private:
     Ui::MainWindow *ui;
     bool isPaused;
@@ -57,6 +59,7 @@ private:
     void addStaticCharacters();
     void moveServersToOccupiedTables(); // Déplace les serveurs vers les tables occupée
     void showTemporaryMessage(Client *client, const QString &message);
+
 
 private slots:
     void togglePause();
