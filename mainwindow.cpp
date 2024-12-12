@@ -8,16 +8,24 @@
 #include <QPropertyAnimation>
 #include <QTimer>
 #include <QRandomGenerator>
+#include <QPushButton>
 
 // Constructeur
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
+, isPaused(false) // Initialisez la variable isPaused
 {
     ui->setupUi(this);
 
     // Initialisation de l'interface
     setupUI();
+
+    // Ajoutez le bouton de pause
+    QPushButton *pauseButton = new QPushButton("Pause", this);
+    pauseButton->setGeometry(10, 10, 100, 30); // Positionnez le bouton
+    connect(pauseButton, &QPushButton::clicked, this, &MainWindow::togglePause);
+
 
     // Appeler la fonction pour ajouter des personnages statiques
     addStaticCharacters();
@@ -31,6 +39,8 @@ MainWindow::MainWindow(QWidget *parent)
     setupKitchen();
     setupStaff();
     setupChefMovement();
+
+
 }
 
 // Destructeur
@@ -46,7 +56,26 @@ MainWindow::~MainWindow()
 // Initialise l'interface utilisateur
 void MainWindow::setupUI() {
     this->setWindowState(Qt::WindowMaximized);
-    this->setStyleSheet("QMainWindow{background:rgb(126,164,146);}");
+     this->setStyleSheet("QMainWindow { background-image: url('C:/Users/HP/Downloads/Projet-X3-save-main/Images/background.jpg'); background-repeat: no-repeat; background-position: center; }");
+}
+
+
+
+void MainWindow::togglePause() {
+    isPaused = !isPaused; // Inverse l'état de pause
+    if (isPaused) {
+        // Arrêtez les timers ou les animations
+        // Par exemple :
+        // timer->stop();
+        // animations->setPaused(true);
+        qDebug() << "Le programme est en pause.";
+    } else {
+        // Redémarrez les timers ou les animations
+        // Par exemple :
+        // timer->start();
+        // animations->setPaused(false);
+        qDebug() << "Le programme reprend.";
+    }
 }
 
 // Crée et configure les tables (4x4) et les clients
