@@ -9,6 +9,7 @@
 #include <QTimer>
 #include <QRandomGenerator>
 #include <QPushButton>
+#include "TaskThread.h"
 
 // Constructeur
 MainWindow::MainWindow(QWidget *parent)
@@ -17,6 +18,8 @@ MainWindow::MainWindow(QWidget *parent)
 , isPaused(false) // Initialisez la variable isPaused
 {
     ui->setupUi(this);
+    // Connecter les signaux du thread aux slots de la fenêtre principale
+    connect(backgroundTask, &TaskThread::progressUpdate, this, &MainWindow::handleProgressUpdate);
 
     // Initialisation de l'interface
     setupUI();
@@ -51,6 +54,18 @@ MainWindow::~MainWindow()
     // Nettoyage des objets créés dynamiquement
     qDeleteAll(clientList);
     qDeleteAll(tableList);
+}
+
+
+void MainWindow::startBackgroundTask() {
+    if (!backgroundTask->isRunning()) {
+        backgroundTask->start(); // Démarrer le thread
+    }
+}
+
+void MainWindow::handleProgressUpdate(int value) {
+    qDebug() << "Progrès : " << value << "%";
+    // Mettez à jour l'interface utilisateur, comme une barre de progression
 }
 
 // Initialise l'interface utilisateur
