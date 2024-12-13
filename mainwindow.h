@@ -10,6 +10,7 @@
 #include "kitchencontroller.h"
 #include "staff.h"
 #include <QPushButton>
+#include "TaskThread.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -28,6 +29,7 @@ public:
 private:
     Ui::MainWindow *ui;
     bool isPaused;
+    TaskThread *backgroundTask; // Ajout du thread
 
 
 
@@ -63,6 +65,8 @@ private:
 
 private slots:
     void togglePause();
+    void startBackgroundTask(); // Démarrer le thread
+    void handleProgressUpdate(int value); // Mettre à jour l'interface utilisateur
 };
 
 #endif // MAINWINDOW_H
